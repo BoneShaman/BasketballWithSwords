@@ -132,8 +132,15 @@
   #shootBtn.disabled{opacity:.28;transform:scale(.92)}
   @keyframes actionPulse{50%{transform:scale(1.08);box-shadow:0 0 42px rgba(255,201,40,.52)}}
   #dashBtn{display:none}
-  #pauseOverlay{display:none;z-index:120;place-items:center;background:rgba(2,4,11,.82);font-size:72px;line-height:.9;letter-spacing:.08em;text-align:center;text-shadow:4px 4px #000;cursor:pointer}
-  #pauseOverlay small{display:block;margin-top:18px;color:var(--gold);font:900 15px/1 system-ui,sans-serif;letter-spacing:.18em;text-shadow:none}
+  #pauseOverlay{display:none;z-index:180;place-items:center;padding:16px;background:rgba(2,4,11,.88);backdrop-filter:blur(7px);text-align:center}
+  .pauseCard{width:min(520px,90%);padding:25px;background:linear-gradient(145deg,rgba(17,23,54,.98),rgba(4,6,16,.98));border:2px solid rgba(255,201,40,.8);box-shadow:0 0 48px rgba(0,0,0,.72)}
+  .pauseTitle{font-size:clamp(46px,7vw,82px);line-height:.86;letter-spacing:.08em;text-shadow:4px 4px #000}
+  .pauseSetting{margin:21px 0 18px;padding:14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.15)}
+  .pauseSetting label{display:flex;justify-content:space-between;gap:20px;margin-bottom:12px;color:#fff;font:900 13px/1 system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+  #musicVolume{width:100%;accent-color:var(--gold);cursor:pointer}
+  .pauseActions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pauseActions button{min-height:48px;font-size:14px}
+  #resumeBtn{grid-column:1/-1}
   @media (max-width:900px),(pointer:coarse){
     #mission{top:76px;font-size:9px;padding:5px 9px}
     #status{top:101px;font-size:9px;padding:5px 8px}
@@ -148,6 +155,12 @@
     #stickKnob{width:50px;height:50px;left:36px;bottom:34px}
     #slashBtn{right:14px;bottom:18px;width:100px;height:100px;font-size:12px}
     #shootBtn{right:116px;bottom:94px;width:70px;height:70px;font-size:11px}
+  }
+  @media (max-height:560px){
+    .pauseCard{padding:14px 18px}
+    .pauseTitle{font-size:38px}
+    .pauseSetting{margin:12px 0;padding:10px}
+    .pauseActions button{min-height:40px;padding:9px 12px}
   }
 </style>
 </head>
@@ -223,7 +236,20 @@
       <div class="smallStage" id="ceremonyDetails">Second crown match • four quarters • fresh score • four-player team</div>
     </div>
   </div>
-  <div id="pauseOverlay" class="layer">PAUSED<small>TAP TO RESUME</small></div>
+  <div id="pauseOverlay" class="layer">
+    <div class="pauseCard">
+      <div class="pauseTitle">PAUSED</div>
+      <div class="pauseSetting">
+        <label for="musicVolume"><span>Music Volume</span><span id="musicVolumeValue">20%</span></label>
+        <input id="musicVolume" type="range" min="0" max="50" step="1" value="20">
+      </div>
+      <div class="pauseActions">
+        <button id="resumeBtn" class="mainBtn">Resume</button>
+        <button id="restartBtn" class="minorBtn">Restart Match</button>
+        <button id="pauseMenuBtn" class="minorBtn">Main Menu</button>
+      </div>
+    </div>
+  </div>
 
   <div id="result" class="layer">
     <div class="resultCard">
@@ -331,8 +357,67 @@ let muted=store.get('bws_muted','0')==='1';
 $('muteBtn').textContent=muted?'SOUND OFF':'SOUND ON';
 
 const audio={ctx:null};
+const MUSIC_TRACKS={
+  title:'assets/Title_Music.mp3',
+  quarterBreak:'assets/Quarter Break.mp3',
+  crowns:['assets/Crown Victory_Track1.mp3','assets/Crown Victory_Track2.mp3'],
+  rounds:{
+    1:['assets/Rookie Match_Track1.mp3','assets/Rookie Match_Track2.mp3'],
+    2:['assets/Challenger Match_track1.mp3','assets/Challenger Match_track2.mp3'],
+    3:['assets/Reigning Champs_track1.mp3','assets/Reigning Champs_track2.mp3']
+  }
+};
+const music=new Audio();
+music.preload='auto';
+let musicVolume=clamp(Number(store.get('bws_musicVolume','0.2'))||0,0,.5);
+let musicKey='',musicShouldResume=false;
+$('musicVolume').value=String(Math.round(musicVolume*100));
+function applyMusicVolume(){
+  music.volume=muted?0:musicVolume;
+  $('musicVolumeValue').textContent=`${Math.round(musicVolume*100)}%`;
+}
+function playMusic(key,src,{loop=false,restart=true}={}){
+  const absoluteSrc=new URL(src,location.href).href;
+  if(musicKey!==key||music.src!==absoluteSrc){
+    musicKey=key;music.src=src;restart=true;
+  }
+  music.loop=loop;
+  if(restart)music.currentTime=0;
+  applyMusicVolume();musicShouldResume=false;
+  if(!muted&&musicVolume>0)music.play().catch(()=>{});
+}
+function stopMusic(){
+  music.pause();music.currentTime=0;musicKey='';musicShouldResume=false;
+}
+function pauseMusic(){
+  musicShouldResume=!music.paused;
+  music.pause();
+}
+function resumeMusic(){
+  if(musicShouldResume&&!muted&&musicVolume>0)music.play().catch(()=>{});
+  musicShouldResume=false;
+}
+function playTitleMusic(restart=false){
+  playMusic('title',MUSIC_TRACKS.title,{loop:true,restart});
+}
+function playQuarterMusic(){
+  const trackIndex=(quarter-1)%2;
+  playMusic(`round-${round}-quarter-${quarter}`,MUSIC_TRACKS.rounds[round][trackIndex],{
+    loop:round===1,
+    restart:true
+  });
+}
+function playQuarterBreakMusic(){
+  playMusic(`quarter-break-${round}-${quarter}`,MUSIC_TRACKS.quarterBreak,{loop:false,restart:true});
+}
+function playCrownMusic(stage=round){
+  const trackIndex=(stage-1)%MUSIC_TRACKS.crowns.length;
+  playMusic(`crown-${stage}`,MUSIC_TRACKS.crowns[trackIndex],{loop:false,restart:true});
+}
+applyMusicVolume();
 function buzz(pattern){try{navigator.vibrate?.(pattern)}catch{}}
 function wakeAudio(){
+  if(state==='title'&&music.paused)playTitleMusic(false);
   if(muted) return;
   if(!audio.ctx) audio.ctx=new (window.AudioContext||window.webkitAudioContext)();
   if(audio.ctx.state==='suspended') audio.ctx.resume();
@@ -623,6 +708,7 @@ function startMatch(){
   wakeAudio(); $('title').style.display='none';$('result').style.display='none';$('hudTop').style.display='block';$('touch').classList.add('active');
   const copy=tutorialCopy();
   createMatch();state='countdown';resetTimer=10.8;tutorialStep=0;runLooseTutorial(copy);
+  playQuarterMusic();
   announce('HOW TO PLAY',copy.intro,1.35);
   tutorialLater(()=>announce('MOVE',copy.moveSub,1.45),720);
   tutorialLater(()=>announce('ACTION',copy.actionSub,1.45),3440);
@@ -637,6 +723,7 @@ function endMatch(){
   if(state==='over')return;
   clearCoachTutorial();hidePlayMessage();hideQuarterBreak();hideRoundBreakOverlay();
   state='over';$('touch').classList.remove('active');sfx('buzzer');winner=score.gold===score.blue?'draw':score.gold>score.blue?'gold':'blue';
+  if(winner==='gold')playCrownMusic(round);else stopMusic();
   setTimeout(()=>{
     $('result').style.display='grid';
     $('resultTitle').textContent=winner==='gold'
@@ -679,6 +766,7 @@ function paintQuarterPips(){
 }
 function showQuarterBreak(){
   hidePlayMessage();clearPossession();slowmo=.62;state='quarterBreak';resetTimer=3.45;lastRoundTick=-1;
+  playQuarterBreakMusic();
   $('quarterEyebrow').textContent=`END OF Q${quarter}`;
   $('quarterOpponent').textContent=opponentName();
   $('quarterGold').textContent=score.gold;$('quarterBlue').textContent=score.blue;
@@ -694,6 +782,7 @@ function updateQuarterBreak(){
 }
 function startNextQuarter(){
   hideQuarterBreak();quarter++;timeLeft=QUARTER_SECONDS;slowmo=1;suddenDeath=false;lastRoundTick=-1;buzzerWaitTimer=0;goalAtBuzzer=false;backcourtHold=0;backcourtPress=false;rallyCount=0;
+  playQuarterMusic();
   spawnRoundFighters();placeRoundFighters('gold');resetBall(false);state='play';
   const p=hero();grantPossession(p,`Q${quarter} START — YOUR BALL`);p.safe=.82;
   updateHud();flash(.34);buzz([24,16,42]);
@@ -705,6 +794,7 @@ function crownTitleForStage(stage=round){
 }
 function showStageVictory(){
   hidePlayMessage();hideQuarterBreak();clearPossession();slowmo=.55;state='champCeremony';betweenRounds=true;stageQualified=true;
+  playCrownMusic(round);
   const next=ROUND_CONFIG[round+1];
   $('breakTitle').textContent=crownTitleForStage(round);
   $('breakNext').textContent=`NEXT: ${next.label} ENTER THE COURT`;
@@ -733,6 +823,7 @@ function resetCurrentStage(retry=false){
   nextPossessionTeam=null;possessionTeam=null;
   particles=[];texts=[];pickups=[];rings=[];afterimages=[];stats={points:0,steals:0,dunks:0,bestStreak:0,shots:0,made:0,intercepts:0};
   spawnRoundFighters();placeRoundFighters('gold');resetBall(false);state='play';
+  playQuarterMusic();
   const p=hero();grantPossession(p,`${opponentName()} — YOUR BALL`);p.safe=.9;
   updateHud();flash(.45);buzz([35,22,55]);sfx(round===3?'champEnter':'stageWin');
   const title=round===3?'CHAMPIONSHIP FINAL':round===2?'CHALLENGER MATCH':'ROOKIE QUALIFIER';
@@ -1659,24 +1750,53 @@ $('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();actionQueued=
 function togglePause(){
   if(state==='title'||state==='over')return;
   paused=!paused;
-  if(paused)cancelShootInputs();
+  if(paused){cancelShootInputs();pauseMusic()}else resumeMusic();
   $('pauseOverlay').style.display=paused?'grid':'none';$('pauseBtn').textContent=paused?'RESUME':'PAUSE';
 }
+function returnToMainMenu(){
+  clearCoachTutorial();hideQuarterBreak();hideRoundBreakOverlay();hidePlayMessage();cancelShootInputs();
+  paused=false;$('pauseOverlay').style.display='none';$('pauseBtn').textContent='PAUSE';
+  $('result').style.display='none';$('title').style.display='grid';$('hudTop').style.display='none';$('touch').classList.remove('active');state='title';
+  playTitleMusic(true);
+}
 $('pauseBtn').onclick=togglePause;
-$('pauseOverlay').onclick=togglePause;
-$('muteBtn').onclick=()=>{muted=!muted;store.set('bws_muted',muted?'1':'0');$('muteBtn').textContent=muted?'SOUND OFF':'SOUND ON';if(!muted)wakeAudio()};
+$('resumeBtn').onclick=togglePause;
+$('restartBtn').onclick=retryCurrentStage;
+$('pauseMenuBtn').onclick=returnToMainMenu;
+$('musicVolume').addEventListener('input',e=>{
+  musicVolume=Number(e.target.value)/100;
+  store.set('bws_musicVolume',String(musicVolume));
+  applyMusicVolume();
+});
+$('muteBtn').onclick=()=>{
+  muted=!muted;store.set('bws_muted',muted?'1':'0');$('muteBtn').textContent=muted?'SOUND OFF':'SOUND ON';
+  applyMusicVolume();
+  if(muted)music.pause();
+  else{
+    wakeAudio();
+    if(!paused&&state!=='title'&&musicKey&&musicVolume>0)music.play().catch(()=>{});
+  }
+};
 $('rotateBtn').onclick=requestLandscape;
 $('startBtn').onclick=async()=>{await requestLandscape();startMatch()};
 $('champBtn').onclick=async()=>{await requestLandscape();startNextRound()};
 $('replayBtn').onclick=async()=>{await requestLandscape();winner==='gold'?startMatch():retryCurrentStage()};
-$('menuBtn').onclick=()=>{clearCoachTutorial();hideQuarterBreak();paused=false;$('pauseOverlay').style.display='none';$('pauseBtn').textContent='PAUSE';$('result').style.display='none';$('title').style.display='grid';$('hudTop').style.display='none';$('touch').classList.remove('active');state='title'};
+$('menuBtn').onclick=returnToMainMenu;
 $('howBtn').onclick=()=>{
+  wakeAudio();
   $('titleHelp').innerHTML=controlsHelpHtml();
 };
 
 window.render_game_to_text=()=>JSON.stringify({
   coordinateSystem:'origin top-left; x increases right; y increases down',
   state,paused,inputMode,round,quarter,timeLeft:Math.max(0,Number(timeLeft.toFixed(2))),score,
+  music:{
+    key:musicKey,
+    src:music.currentSrc||music.src,
+    volume:Number(musicVolume.toFixed(2)),
+    playing:!music.paused,
+    loop:music.loop
+  },
   tutorial:$('controlToast').classList.contains('show')?$('controlToast').textContent:'',
   player:hero()?{
     x:Number(hero().x.toFixed(1)),y:Number(hero().y.toFixed(1)),hasBall:hero().hasBall,

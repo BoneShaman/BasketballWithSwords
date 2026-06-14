@@ -28,7 +28,7 @@ The game is designed for modern desktop and mobile browsers. Landscape orientati
 - Buzzer-beater logic for shots released before the horn.
 - Quarter-break scoreboard screens.
 - Keyboard, mouse, touch, and gamepad-style input logic.
-- Fullscreen landscape requests on supported mobile browsers.
+- Fullscreen landscape requests on match start, plus a pause-menu fullscreen toggle.
 - Distinct uniforms for each opponent tier.
 - A halftime Rookie reinforcement if the Kings build a 12-point lead.
 - Adaptive two-tier rubber banding that escalates opponent pressure.
@@ -89,11 +89,11 @@ Major iteration areas included:
 - Fixing buzzer beaters, score transitions, cooldowns, and match flow.
 - Adding tournament progression and same-team retry logic.
 - Balancing opponent behaviour with adaptive rubber banding.
+- Integrating quarter-aware music, score reactions, and browser audio initialization.
+- Adding pause settings, fullscreen controls, and the Rookie halftime reinforcement.
 - Improving score screens, cooldown indicators, team readability, and progression.
 - Testing keyboard, mouse, touch, and browser gameplay paths.
 
 ## Development Status
 
-This competition build is still being finished. The music tracks are integrated; upcoming work includes expanding sound effects and completing the last polish and balancing passes.
-
-The repository will be updated as those competition-ready improvements land.
+The competition build is complete and playable through GitHub Pages.

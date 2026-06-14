@@ -144,7 +144,7 @@
   #musicVolume{width:100%;accent-color:var(--gold);cursor:pointer}
   .pauseActions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .pauseActions button{min-height:48px;font-size:14px}
-  #resumeBtn{grid-column:1/-1}
+  #resumeBtn,#pauseMenuBtn{grid-column:1/-1}
   @media (max-width:900px),(pointer:coarse){
     #mission{top:76px;font-size:9px;padding:5px 9px}
     #status{top:101px;font-size:9px;padding:5px 8px}
@@ -191,7 +191,6 @@
       <div class="tag">Win the Rookie Crown. Win the Challenger Crown. Then face the Reigning Champs.</div>
       <div class="titleRow">
         <button id="startBtn" class="mainBtn">Enter The Court</button>
-        <button id="howBtn" class="minorBtn">How To Play</button>
       </div>
       <div class="smallPrint" id="titleHelp"><b>WIN:</b> Beat 3 teams. Play 4 quarters against each team. First the Rookies. Then the Challengers. Then the Reigning Champs. Move with the stick. Press <b>ACTION</b> to dash or swing. Hold <b>SHOOT</b>. Let go in the green box.</div>
     </div>
@@ -254,6 +253,7 @@
       <div class="pauseActions">
         <button id="resumeBtn" class="mainBtn">Resume</button>
         <button id="restartBtn" class="minorBtn">Restart Match</button>
+        <button id="fullscreenBtn" class="minorBtn">Fullscreen</button>
         <button id="pauseMenuBtn" class="minorBtn">Main Menu</button>
       </div>
     </div>
@@ -343,6 +343,21 @@ async function requestLandscape(){
   try{await screen.orientation?.lock?.('landscape')}catch{}
   setTimeout(resize,180);
 }
+function updateFullscreenButton(){
+  $('fullscreenBtn').textContent=document.fullscreenElement?'Exit Fullscreen':'Fullscreen';
+}
+async function toggleFullscreen(){
+  try{
+    if(document.fullscreenElement)await document.exitFullscreen?.();
+    else{
+      await document.documentElement.requestFullscreen?.();
+      try{await screen.orientation?.lock?.('landscape')}catch{}
+    }
+  }catch{}
+  updateFullscreenButton();setTimeout(resize,180);
+}
+document.addEventListener('fullscreenchange',()=>{updateFullscreenButton();setTimeout(resize,80)});
+updateFullscreenButton();
 
 let state='title', paused=false, timeLeft=QUARTER_SECONDS, score={gold:0,blue:0}, winner=null;
 let fighters=[], ball={}, particles=[], texts=[], pickups=[], rings=[], afterimages=[];
@@ -1819,6 +1834,7 @@ function returnToMainMenu(){
 $('pauseBtn').onclick=togglePause;
 $('resumeBtn').onclick=togglePause;
 $('restartBtn').onclick=retryCurrentStage;
+$('fullscreenBtn').onclick=toggleFullscreen;
 $('pauseMenuBtn').onclick=returnToMainMenu;
 $('musicVolume').addEventListener('input',e=>{
   musicVolume=Number(e.target.value)/100;
@@ -1839,10 +1855,6 @@ $('startBtn').onclick=async()=>{await requestLandscape();startMatch()};
 $('champBtn').onclick=async()=>{await requestLandscape();startNextRound()};
 $('replayBtn').onclick=async()=>{await requestLandscape();winner==='gold'?startMatch():retryCurrentStage()};
 $('menuBtn').onclick=returnToMainMenu;
-$('howBtn').onclick=()=>{
-  wakeAudio();
-  $('titleHelp').innerHTML=controlsHelpHtml();
-};
 
 window.render_game_to_text=()=>JSON.stringify({
   coordinateSystem:'origin top-left; x increases right; y increases down',

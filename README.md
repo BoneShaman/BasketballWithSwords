@@ -31,7 +31,7 @@ The game is designed for modern desktop and mobile browsers. Landscape orientati
 - Fullscreen landscape requests on supported mobile browsers.
 - Distinct uniforms for each opponent tier.
 - Adaptive two-tier rubber banding that escalates opponent pressure.
-- Quarter-aware original music, Canvas-rendered visual effects, and procedural arcade sound effects.
+- Quarter-aware original music, Canvas-rendered visual effects, and procedural plus recorded arcade sound effects.
 
 ## How To Play
 

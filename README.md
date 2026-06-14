@@ -96,11 +96,3 @@ Major iteration areas included:
 This competition build is still being finished. Upcoming work includes integrating the final music tracks, expanding sound effects, and completing the last polish and balancing passes.
 
 The repository will be updated as those competition-ready improvements land.
-
-## Rights
-
-Copyright © 2026 BoneShaman. All rights reserved.
-
-This repository is public for competition submission, judging, and playable distribution. The source code, game design, audio, artwork, and other assets are **not open source** and are not licensed for copying, modification, redistribution, or commercial use.
-
-No open-source license is granted by the public availability of this repository.

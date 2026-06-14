@@ -30,6 +30,7 @@ The game is designed for modern desktop and mobile browsers. Landscape orientati
 - Keyboard, mouse, touch, and gamepad-style input logic.
 - Fullscreen landscape requests on supported mobile browsers.
 - Distinct uniforms for each opponent tier.
+- A halftime Rookie reinforcement if the Kings build a 12-point lead.
 - Adaptive two-tier rubber banding that escalates opponent pressure.
 - Quarter-aware original music, Canvas-rendered visual effects, and procedural plus recorded arcade sound effects.
 

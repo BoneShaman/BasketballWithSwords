@@ -306,7 +306,7 @@ function setInputMode(mode){
 }
 setInputMode(inputMode);
 const ROUND_CONFIG={
-  1:{enemies:3,label:'ROOKIES',tier:'rookies',names:['PIP','BO','MILO'],speed:.68,pass:.28,shoot:.2,shotSkill:.58,drive:.004,pressure:1,closeout:.026,wall:false},
+  1:{enemies:3,label:'ROOKIES',tier:'rookies',names:['PIP','BO','MILO','JET'],speed:.68,pass:.28,shoot:.2,shotSkill:.58,drive:.004,pressure:1,closeout:.026,wall:false},
   2:{enemies:4,label:'CHALLENGERS',tier:'challengers',names:['ACE','NOVA','MOSS','BRICK'],speed:.68,pass:.28,shoot:.2,shotSkill:.58,drive:.004,pressure:1,closeout:.026,wall:false},
   3:{enemies:4,label:'REIGNING CHAMPS',tier:'champs',names:['VEX','RUNE','BULL','SHADE'],speed:1,pass:.74,shoot:.43,shotSkill:1,drive:.01,pressure:4,closeout:.092,wall:true}
 };
@@ -351,7 +351,7 @@ let resetTimer=0, statusTimer=0, tipTimer=0, matchSerial=0, playerStreak=0, sudd
 let nextPossessionTeam=null, rallyCount=0, bestRally=0, possessionTeam=null;
 let round=1, quarter=1, betweenRounds=false, stageQualified=false;
 let lastRoundTick=-1, buzzerWaitTimer=0, goalAtBuzzer=false;
-let backcourtHold=0, backcourtPress=false, rubberBandTier=0;
+let backcourtHold=0, backcourtPress=false, rubberBandTier=0, rookieReinforced=false;
 let stats={points:0,steals:0,dunks:0,bestStreak:0,shots:0,made:0,intercepts:0};
 const store={
   get(key,fallback=''){try{return localStorage.getItem(key)??fallback}catch{return fallback}},
@@ -690,10 +690,16 @@ function makeEnemy(slot){
   if(roundConfig().tier==='champs')f.armor=CHAMP_ARMOR;
   return f;
 }
+function shouldAddRookieReinforcement(currentRound=round,currentQuarter=quarter,currentScore=score){
+  return currentRound===1&&currentQuarter===2&&currentScore.gold-currentScore.blue>=12;
+}
+function roundEnemyCount(){
+  return round===1&&rookieReinforced?4:roundConfig().enemies;
+}
 function spawnRoundFighters(){
   const p=makeFighter('gold',350,COURT.cy,true,'hero');p.name='YOU';p.slot=-1;
   fighters=[p];
-  for(let i=0;i<roundConfig().enemies;i++)fighters.push(makeEnemy(i));
+  for(let i=0;i<roundEnemyCount();i++)fighters.push(makeEnemy(i));
 }
 function placeRoundFighters(inboundTeam=null){
   const p=hero(), es=enemies();
@@ -718,7 +724,7 @@ function resetFighterState(f){
 }
 function createMatch(){
   matchSerial++;round=1;quarter=1;timeLeft=QUARTER_SECONDS;score={gold:0,blue:0};winner=null;paused=false;resetTimer=0;playerStreak=0;suddenDeath=false;
-  nextPossessionTeam=null;rallyCount=0;bestRally=0;possessionTeam=null;betweenRounds=false;stageQualified=false;lastRoundTick=-1;buzzerWaitTimer=0;goalAtBuzzer=false;backcourtHold=0;backcourtPress=false;rubberBandTier=0;
+  nextPossessionTeam=null;rallyCount=0;bestRally=0;possessionTeam=null;betweenRounds=false;stageQualified=false;lastRoundTick=-1;buzzerWaitTimer=0;goalAtBuzzer=false;backcourtHold=0;backcourtPress=false;rubberBandTier=0;rookieReinforced=false;
   spawnRoundFighters();placeRoundFighters(null);
   particles=[];texts=[];pickups=[];rings=[];afterimages=[];stats={points:0,steals:0,dunks:0,bestStreak:0,shots:0,made:0,intercepts:0};
   resetBall(true);updateHud();
@@ -787,6 +793,8 @@ function paintQuarterPips(){
 }
 function showQuarterBreak(){
   hidePlayMessage();clearPossession();slowmo=.62;state='quarterBreak';resetTimer=3.45;lastRoundTick=-1;
+  const reinforcementArriving=shouldAddRookieReinforcement();
+  if(reinforcementArriving)rookieReinforced=true;
   playQuarterBreakMusic();
   $('quarterEyebrow').textContent=`END OF Q${quarter}`;
   $('quarterOpponent').textContent=opponentName();
@@ -794,8 +802,15 @@ function showQuarterBreak(){
   $('quarterLead').textContent=quarterLeadText();
   $('quarterCount').textContent='3';paintQuarterPips();
   $('quarterTimeOverlay').classList.add('show');
-  announce(`END OF Q${quarter}`,quarterLeadText(),1.18);
-  setTip(`QUARTER BREAK. Q${quarter+1} STARTS SOON.`,2.9);
+  announce(
+    reinforcementArriving?'ROOKIE REINFORCEMENT!':`END OF Q${quarter}`,
+    reinforcementArriving?'JET JOINS THE ROOKIES FOR THE SECOND HALF':quarterLeadText(),
+    reinforcementArriving?1.55:1.18
+  );
+  setTip(
+    reinforcementArriving?'YOU LED BY 12 AT HALF. THE ROOKIES HAVE CALLED IN A FOURTH PLAYER.':`QUARTER BREAK. Q${quarter+1} STARTS SOON.`,
+    2.9
+  );
 }
 function hideQuarterBreak(){$('quarterTimeOverlay').classList.remove('show')}
 function updateQuarterBreak(){
@@ -840,7 +855,7 @@ function resetCurrentStage(retry=false){
   paused=false;$('pauseOverlay').style.display='none';$('pauseBtn').textContent='PAUSE';
   $('result').style.display='none';$('title').style.display='none';$('hudTop').style.display='block';$('touch').classList.add('active');
   quarter=1;timeLeft=QUARTER_SECONDS;score={gold:0,blue:0};winner=null;betweenRounds=false;slowmo=1;rallyCount=0;bestRally=0;playerStreak=0;suddenDeath=false;
-  lastRoundTick=-1;buzzerWaitTimer=0;goalAtBuzzer=false;backcourtHold=0;backcourtPress=false;rubberBandTier=0;stageQualified=false;
+  lastRoundTick=-1;buzzerWaitTimer=0;goalAtBuzzer=false;backcourtHold=0;backcourtPress=false;rubberBandTier=0;stageQualified=false;rookieReinforced=false;
   nextPossessionTeam=null;possessionTeam=null;
   particles=[];texts=[];pickups=[];rings=[];afterimages=[];stats={points:0,steals:0,dunks:0,bestStreak:0,shots:0,made:0,intercepts:0};
   spawnRoundFighters();placeRoundFighters('gold');resetBall(false);state='play';
@@ -1832,6 +1847,7 @@ $('howBtn').onclick=()=>{
 window.render_game_to_text=()=>JSON.stringify({
   coordinateSystem:'origin top-left; x increases right; y increases down',
   state,paused,inputMode,round,quarter,timeLeft:Math.max(0,Number(timeLeft.toFixed(2))),score,
+  rookieReinforced,
   music:{
     key:musicKey,
     src:music.currentSrc||music.src,
